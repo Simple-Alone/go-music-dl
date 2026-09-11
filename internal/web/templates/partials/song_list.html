@@ -7,6 +7,8 @@
             <span class="result-count" style="font-size: 16px;"><i class="fa-solid fa-folder-open"></i> 正在查看: <span style="color:#10b981; margin-left: 5px;">{{ .ColName }}</span>（共 {{ .TotalCount }} 首）</span>
             {{ else if eq .SearchType "local_music" }}
             <span class="result-count"><i class="fa-solid fa-music"></i> 本地音乐（共 <span class="count" id="localMusicPageTotal">{{ .TotalCount }}</span> 首）</span>
+            {{ else if .GuessYouLike.Enabled }}
+            <span class="result-count"><i class="fa-solid fa-wand-magic-sparkles"></i> 为你推荐 <span class="count">{{ .TotalCount }}</span> 首歌曲</span>
             {{ else }}
             <span class="result-count"><i class="fa-solid fa-music"></i> 找到 <span class="count">{{ .TotalCount }}</span> 首歌曲</span>
             {{ if .PlaylistLink }}

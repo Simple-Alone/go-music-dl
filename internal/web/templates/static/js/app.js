@@ -1700,6 +1700,46 @@ function goToRecommend() {
   }
 }
 
+function guessArtistSeeds(entries) {
+  const seeds = [];
+  const seen = new Set();
+  for (const entry of entries) {
+    const artists = String(entry?.artist || "")
+      .split(/\s*(?:\/|、|,|，|&| feat\.? | ft\.? )\s*/i)
+      .map((artist) => artist.trim())
+      .filter(Boolean);
+    for (const artist of artists) {
+      const key = artist.toLocaleLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      seeds.push(artist);
+      if (seeds.length === 6) return seeds;
+    }
+  }
+  return seeds;
+}
+
+function guessYouLikeURL(refresh = false) {
+  const history = readPlaybackHistory();
+  const params = new URLSearchParams();
+  guessArtistSeeds(history).forEach((artist) => params.append("artists", artist));
+  history
+    .filter((entry) => entry.source === "kugou" && entry.id)
+    .slice(0, 60)
+    .forEach((entry) => params.append("exclude", String(entry.id)));
+  if (refresh) params.set("refresh", String(Date.now()));
+  const query = params.toString();
+  return `${API_ROOT}/guess_you_like${query ? `?${query}` : ""}`;
+}
+
+function goToGuessYouLike() {
+  navigateTo(guessYouLikeURL(false));
+}
+
+function refreshGuessYouLike() {
+  navigateTo(guessYouLikeURL(true), { historyMode: "replace", scroll: false });
+}
+
 function switchCategorySource(tab) {
   if (!tab) return;
   const panelId = tab.getAttribute("data-target");

@@ -243,6 +243,12 @@ func renderIndex(c *gin.Context, songs []model.Song, playlists []model.Playlist,
 	playlistCategorySources, _ := c.Get("PlaylistCategorySources")
 	playlistCategoryCurrent, _ := c.Get("PlaylistCategoryCurrent")
 	playlistSourceTabs, _ := c.Get("PlaylistSourceTabs")
+	guessYouLike := guessYouLikeData{}
+	if value, ok := c.Get("GuessYouLike"); ok {
+		if page, valid := value.(guessYouLikeData); valid {
+			guessYouLike = page
+		}
+	}
 
 	settings := core.GetWebSettings()
 	defaultPageSize := settings.WebPageSize
@@ -336,6 +342,7 @@ func renderIndex(c *gin.Context, songs []model.Song, playlists []model.Playlist,
 		"PlaylistCategorySources": playlistCategorySources,
 		"PlaylistCategoryCurrent": playlistCategoryCurrent,
 		"PlaylistSourceTabs":      playlistSourceTabs,
+		"GuessYouLike":            guessYouLike,
 		"UserPlaylistSupported":   userPlaylistSupported,
 	})
 }

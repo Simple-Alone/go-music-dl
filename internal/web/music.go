@@ -350,6 +350,7 @@ func playlistCategoryPlaylistsURL(source string, category model.PlaylistCategory
 }
 
 func RegisterMusicRoutes(api, configAPI *gin.RouterGroup) {
+	registerGuessYouLikeRoute(api)
 
 	api.GET("/", func(c *gin.Context) {
 		renderIndex(c, nil, nil, "", nil, "", "song", "", "", "", false, "", nil)
