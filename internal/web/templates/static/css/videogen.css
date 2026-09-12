@@ -1,7 +1,7 @@
 /* Modal Background */
 .vg-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
-    background: #000; z-index: 10000;
+    background: #000; z-index: 10050;
     display: none; justify-content: center; align-items: center;
     opacity: 0; transition: opacity 0.5s ease;
     overflow: hidden; box-sizing: border-box;
@@ -31,21 +31,24 @@
     position: relative; z-index: 2; 
     width: 100%; height: 90vh;
     max-width: 1400px;
+    padding: 0 32px;
     display: flex; align-items: center; justify-content: space-between;
     /* 【修复遮挡】：改为 visible 让光柱能够自然伸展不受父级边界裁切 */
     overflow: visible; box-sizing: border-box;
 }
 
 .vg-close {
-    position: absolute; top: 20px; right: 20px; width: 40px; height: 40px;
+    position: fixed; top: max(20px, env(safe-area-inset-top)); right: max(20px, env(safe-area-inset-right)); width: 44px; height: 44px;
+    padding: 0;
     border-radius: 50%; color: white;
     background: rgba(0,0,0,0.6); 
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: 0.2s; z-index: 20; font-size: 20px;
+    cursor: pointer; transition: 0.2s; z-index: 100; font-size: 20px;
     border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(5px);
     box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 .vg-close:hover { background: rgba(0,0,0,0.9); transform: rotate(90deg); }
+.vg-close:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 
 /* === Left Layout === */
 .vg-left {
@@ -350,7 +353,7 @@
         flex-direction: column; 
         height: 100dvh; 
         width: 100%; 
-        padding: 40px 0 20px; 
+        padding: max(56px, calc(env(safe-area-inset-top) + 48px)) 0 max(20px, env(safe-area-inset-bottom));
         box-sizing: border-box; 
         justify-content: flex-start; 
         overflow: visible; /* 【手机端防裁切关键属性】 */
@@ -393,7 +396,7 @@
     }
     .vg-line { padding: 8px 5px; font-size: clamp(14px, 4vw, 18px); }
     .vg-line.active { padding-left: 5px; transform: scale(1.02); font-size: clamp(19px, 6vw, 26px); }
-    .vg-close { top: 15px; right: 15px; }
+    .vg-close { top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); }
 }
 /* === 替换原本的 .vg-volume-wrapper，改为整合控制栏 === */
 .vg-playback-row {

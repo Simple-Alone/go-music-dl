@@ -1306,7 +1306,9 @@
         this.detachEvents(this._currentAudioEl);
         if (this.isLocalAudio && this.localAudio) this.localAudio.pause();
         if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
-        const m = document.getElementById("vg-modal"); m.classList.remove("active");
+        const m = document.getElementById("vg-modal");
+        if (!m) return;
+        m.classList.remove("active");
         document.body.classList.remove("vg-open");
         setTimeout(() => { m.style.display = "none"; this.reset(); }, 500);
       },
@@ -1534,4 +1536,11 @@
         }
       },
     };
+
+    document.addEventListener("keydown", function (event) {
+      const modal = document.getElementById("vg-modal");
+      if (event.key !== "Escape" || !modal?.classList.contains("active")) return;
+      event.preventDefault();
+      window.VideoGen.close();
+    });
 })();

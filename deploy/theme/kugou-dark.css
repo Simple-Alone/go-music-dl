@@ -962,10 +962,92 @@ body.music-client-theme select:focus-visible {
 }
 
 .music-client-theme .aplayer.aplayer-fixed .aplayer-body {
+    left: 220px !important;
+    right: 0 !important;
+    width: auto !important;
+    max-width: none !important;
     height: 84px !important;
     border-radius: 0 !important;
     background: #181b21 !important;
     color: #f4f6f8 !important;
+}
+
+.music-client-theme .main-player-controls {
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    z-index: 12;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 46px;
+    transform: translateX(-50%);
+}
+
+.music-client-theme .main-player-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #c7ced8;
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.music-client-theme .main-player-button:hover:not(:disabled) {
+    background: #2a3039;
+    color: #fff;
+}
+
+.music-client-theme .main-player-button:active:not(:disabled) {
+    transform: scale(0.94);
+}
+
+.music-client-theme .main-player-button:disabled {
+    color: #555e6b;
+    cursor: default;
+}
+
+.music-client-theme .main-player-toggle {
+    width: 44px;
+    height: 44px;
+    background: #f4f6f8;
+    color: #171a20;
+    font-size: 16px;
+}
+
+.music-client-theme .main-player-toggle:hover:not(:disabled) {
+    background: #fff;
+    color: #111318;
+}
+
+.music-client-theme .aplayer .aplayer-info .aplayer-music {
+    max-width: calc(50% - 150px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.music-client-theme .aplayer.aplayer-fixed .aplayer-icon-back,
+.music-client-theme .aplayer.aplayer-fixed .aplayer-icon-play,
+.music-client-theme .aplayer.aplayer-fixed .aplayer-icon-forward {
+    display: none !important;
+}
+
+.music-client-theme .vg-overlay {
+    z-index: 10050;
+}
+
+.music-client-theme.vg-open .app-sidebar,
+.music-client-theme.vg-open .app-topbar,
+.music-client-theme.vg-open .app-sidebar-scrim {
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 .music-client-theme .aplayer.aplayer-fixed .aplayer-pic {
@@ -1122,6 +1204,10 @@ body.music-client-theme select:focus-visible {
     }
 
     .music-client-theme .aplayer.aplayer-fixed {
+        left: 76px !important;
+    }
+
+    .music-client-theme .aplayer.aplayer-fixed .aplayer-body {
         left: 76px !important;
     }
 }
@@ -1285,6 +1371,7 @@ body.music-client-theme select:focus-visible {
     }
 
     .music-client-theme .aplayer.aplayer-fixed .aplayer-body {
+        left: 0 !important;
         height: 72px !important;
         border-radius: 0 !important;
     }
@@ -1297,6 +1384,29 @@ body.music-client-theme select:focus-visible {
     .music-client-theme .aplayer .aplayer-info {
         height: 72px !important;
         padding: 9px 10px 0 !important;
+    }
+
+    .music-client-theme .main-player-controls {
+        top: 5px;
+        right: 10px;
+        left: auto;
+        gap: 4px;
+        height: 44px;
+        transform: none;
+    }
+
+    .music-client-theme .main-player-button {
+        width: 32px;
+        height: 32px;
+    }
+
+    .music-client-theme .main-player-toggle {
+        width: 40px;
+        height: 40px;
+    }
+
+    .music-client-theme .aplayer .aplayer-info .aplayer-music {
+        max-width: calc(100% - 144px);
     }
 
     .music-client-theme .auth-shell {

@@ -196,6 +196,100 @@
     if (widget) widget.remove();
   }
 
+  function playerHasTracks() {
+    return !!(window.ap?.list?.audios?.length);
+  }
+
+  function syncPlayerControls() {
+    const controls = document.getElementById("main-player-controls");
+    if (!controls) return;
+
+    const hasTracks = playerHasTracks();
+    const hasMultipleTracks = (window.ap?.list?.audios?.length || 0) > 1;
+    const isPlaying = hasTracks && !window.ap.audio.paused;
+    const playButton = controls.querySelector('[data-player-action="toggle"]');
+    const playIcon = playButton?.querySelector("i");
+
+    controls.querySelectorAll("button").forEach((button) => {
+      button.disabled = button.dataset.playerAction === "toggle" ? !hasTracks : !hasMultipleTracks;
+    });
+    if (playIcon) playIcon.className = `fa-solid ${isPlaying ? "fa-pause" : "fa-play"}`;
+    if (playButton) {
+      const label = isPlaying ? "暂停" : "播放";
+      playButton.title = label;
+      playButton.setAttribute("aria-label", label);
+      playButton.setAttribute("aria-pressed", String(isPlaying));
+    }
+  }
+
+  function changeTrack(direction) {
+    if (!playerHasTracks()) return;
+    if (direction < 0 && typeof window.ap.skipBack === "function") window.ap.skipBack();
+    if (direction > 0 && typeof window.ap.skipForward === "function") window.ap.skipForward();
+    window.ap.play();
+  }
+
+  function ensurePlayerControls() {
+    const playerBody = document.querySelector(".aplayer.aplayer-fixed .aplayer-body");
+    if (!playerBody || document.getElementById("main-player-controls")) return;
+
+    const controls = document.createElement("div");
+    controls.id = "main-player-controls";
+    controls.className = "main-player-controls";
+    controls.setAttribute("role", "group");
+    controls.setAttribute("aria-label", "播放控制");
+    controls.innerHTML = `
+      <button type="button" class="main-player-button" data-player-action="previous" title="上一首" aria-label="上一首">${icon("fa-backward-step")}</button>
+      <button type="button" class="main-player-button main-player-toggle" data-player-action="toggle" title="播放" aria-label="播放" aria-pressed="false">${icon("fa-play")}</button>
+      <button type="button" class="main-player-button" data-player-action="next" title="下一首" aria-label="下一首">${icon("fa-forward-step")}</button>`;
+
+    controls.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-player-action]");
+      if (!button || button.disabled) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (button.dataset.playerAction === "previous") changeTrack(-1);
+      if (button.dataset.playerAction === "next") changeTrack(1);
+      if (button.dataset.playerAction === "toggle") window.ap.toggle();
+      syncPlayerControls();
+    });
+    playerBody.appendChild(controls);
+
+    if (window.ap?.audio && window.ap.audio.dataset.themeControlsBound !== "1") {
+      window.ap.audio.dataset.themeControlsBound = "1";
+      ["play", "pause", "ended", "loadedmetadata"].forEach((eventName) => {
+        window.ap.audio.addEventListener(eventName, syncPlayerControls);
+      });
+      ["listadd", "listremove", "listswitch"].forEach((eventName) => {
+        window.ap.on(eventName, syncPlayerControls);
+      });
+    }
+    syncPlayerControls();
+  }
+
+  function enhanceSongDetail() {
+    const modal = document.getElementById("vg-modal");
+    const closeButton = modal?.querySelector(".vg-close");
+    if (!modal || !closeButton) return;
+
+    if (closeButton.getAttribute("title") !== "关闭歌曲详情") {
+      closeButton.setAttribute("title", "关闭歌曲详情");
+    }
+    closeButton.setAttribute("aria-label", "关闭歌曲详情");
+    if (closeButton.tagName !== "BUTTON") {
+      closeButton.setAttribute("role", "button");
+      closeButton.setAttribute("tabindex", "0");
+    }
+    if (closeButton.tagName !== "BUTTON" && closeButton.dataset.keyboardBound !== "1") {
+      closeButton.dataset.keyboardBound = "1";
+      closeButton.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        window.VideoGen?.close();
+      });
+    }
+  }
+
   function syncTheme() {
     syncQueued = false;
     document.documentElement.classList.add("music-client-theme-root");
@@ -207,6 +301,8 @@
     decorateToolbar();
     updateNavigation();
     removeDecoration();
+    ensurePlayerControls();
+    enhanceSongDetail();
   }
 
   function queueSync() {
@@ -225,6 +321,12 @@
     attributeFilter: ["title"],
   });
   window.addEventListener("popstate", queueSync);
+  document.addEventListener("keydown", (event) => {
+    const modal = document.getElementById("vg-modal");
+    if (event.key !== "Escape" || !modal?.classList.contains("active")) return;
+    event.preventDefault();
+    window.VideoGen?.close();
+  });
   window.addEventListener("resize", () => {
     if (window.innerWidth > 768) document.body.classList.remove("sidebar-open");
   });

@@ -1,11 +1,11 @@
 {{define "videogen_modal"}}
-<div id="vg-modal" class="vg-overlay">
+<div id="vg-modal" class="vg-overlay" role="dialog" aria-modal="true" aria-label="歌曲详情">
     <div id="vg-bg" class="vg-bg-layer">
         <img id="vg-bg-img" class="vg-bg-content is-image" src="">
         <video id="vg-bg-video" class="vg-bg-content" autoplay loop muted style="display:none;"></video>
     </div>
 
-    <div class="vg-close" onclick="VideoGen.close()"><i class="fa-solid fa-xmark"></i></div>
+    <button type="button" class="vg-close" onclick="VideoGen.close()" title="关闭歌曲详情" aria-label="关闭歌曲详情"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
 
     <div class="vg-container" id="vg-ui-container">
         <div class="vg-left">
