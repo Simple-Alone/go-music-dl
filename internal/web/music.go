@@ -1340,6 +1340,7 @@ var (
 const (
 	switchMaxCandidatesPerSource     = 8
 	switchSourceSearchTimeout        = 6 * time.Second
+	switchMinCandidateScore          = 0.80
 	switchHighConfidenceScore        = 0.98
 	switchParallelValidationLimit    = 12
 	switchParallelValidationParallel = 6
@@ -1493,7 +1494,7 @@ func searchSwitchSourceCandidates(source string, fn func(string) ([]model.Song, 
 		cand := res[i]
 		cand.Source = source
 		score := core.CalcSongSimilarity(name, artist, cand.Name, cand.Artist)
-		if score <= 0 {
+		if score < switchMinCandidateScore {
 			continue
 		}
 

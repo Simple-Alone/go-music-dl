@@ -1440,6 +1440,8 @@ type switchCandidate struct {
 	durDiff int
 }
 
+const minSwitchCandidateScore = 0.80
+
 func findBestSwitchSong(current model.Song) (model.Song, error) {
 	if current.Name == "" {
 		return model.Song{}, fmt.Errorf("缺少歌名")
@@ -1489,7 +1491,7 @@ func findBestSwitchSong(current model.Song) (model.Song, error) {
 				cand := res[i]
 				cand.Source = s
 				score := calcSongSimilarity(current.Name, current.Artist, cand.Name, cand.Artist)
-				if score <= 0 {
+				if score < minSwitchCandidateScore {
 					continue
 				}
 
@@ -1579,11 +1581,17 @@ func calcSongSimilarity(name, artist, candName, candArtist string) float64 {
 
 	artistA := normalizeText(artist)
 	artistB := normalizeText(candArtist)
-	if artistA == "" || artistB == "" {
+	if artistA == "" {
 		return nameSim
+	}
+	if artistB == "" {
+		return 0
 	}
 
 	artistSim := similarityScore(artistA, artistB)
+	if artistSim < 0.5 {
+		return 0
+	}
 	return nameSim*0.7 + artistSim*0.3
 }
 

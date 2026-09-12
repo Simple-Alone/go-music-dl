@@ -49,3 +49,13 @@ func TestIsLikelyIncompleteAudio(t *testing.T) {
 		})
 	}
 }
+
+func TestCalcSongSimilarityRejectsDifferentArtist(t *testing.T) {
+	if got := CalcSongSimilarity("晴天", "周杰伦", "晴天", "张信哲"); got != 0 {
+		t.Fatalf("different artist similarity = %f, want 0", got)
+	}
+
+	if got := CalcSongSimilarity("晴天", "周杰伦", "晴天", "周杰伦/温岚"); got < 0.8 {
+		t.Fatalf("matching primary artist similarity = %f, want at least 0.8", got)
+	}
+}

@@ -947,11 +947,17 @@ func CalcSongSimilarity(name, artist, candName, candArtist string) float64 {
 
 	artistA := NormalizeText(artist)
 	artistB := NormalizeText(candArtist)
-	if artistA == "" || artistB == "" {
+	if artistA == "" {
 		return nameSim
+	}
+	if artistB == "" {
+		return 0
 	}
 
 	artistSim := SimilarityScore(artistA, artistB)
+	if artistSim < 0.5 {
+		return 0
+	}
 	return nameSim*0.7 + artistSim*0.3
 }
 
