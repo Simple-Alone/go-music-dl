@@ -1,0 +1,19 @@
+go-music-dl modified distribution notice
+
+This distribution is based on the go-music-dl project:
+https://github.com/guohuiyuan/go-music-dl
+
+The source code for this modified distribution is available at:
+https://github.com/Simple-Alone/go-music-dl
+
+Modifications maintained by Simple-Alone since 2026-09-11 include a custom
+Web interface, playback-history-based recommendations, and deployment changes.
+The Git revision recorded in each container image identifies the corresponding
+source version.
+
+This program is distributed under the GNU Affero General Public License,
+version 3, without any warranty. See LICENSE for the complete license terms.
+
+Copyright and attribution notices from the upstream project and third-party
+components are retained. See THIRD_PARTY_NOTICES.md for bundled component
+information.

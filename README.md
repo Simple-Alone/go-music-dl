@@ -8,6 +8,8 @@
 
 Go Music DL 是一个音乐搜索与下载工具，支持 **Web 界面**、**TUI 终端** 和 **桌面应用** 三种使用模式。除了单曲搜索与下载外，还支持 **歌单搜索 / 解析**、**歌单分类浏览**、**我的歌单**、**专辑搜索 / 解析**、整单 / 整专曲目查看与批量处理。你可以在浏览器试听，也可以在终端里批量下载，或使用原生桌面应用享受最佳体验。
 
+> **Fork 声明：** 本分支修改自 [guohuiyuan/go-music-dl](https://github.com/guohuiyuan/go-music-dl)，2026-09-11 起由 Simple-Alone 维护自定义 Web 界面、推荐功能和部署配置。完整的对应源码与许可证见 [Simple-Alone/go-music-dl](https://github.com/Simple-Alone/go-music-dl)。本项目按 GNU AGPL v3 提供，不附带任何担保。
+
 ## 🚀 快速开始
 
 ### 桌面应用 (推荐)
@@ -266,11 +268,12 @@ docker compose down
 
 ```
 
-浏览器访问 `http://localhost:8080`。
+当前 Compose 配置仅在宿主机回环地址监听，可在 VPS 本机访问 `http://127.0.0.1:18080/music/`，或通过 Nginx 反向代理公开。
 
 **说明：**
 
-* 自动拉取 `guohuiyuan/go-music-dl:latest` 镜像
+* 自动拉取 `ghcr.io/simple-alone/go-music-dl:latest` 镜像
+* 每个镜像同时发布 SBOM、构建来源证明和对应 Git 提交标签
 * 支持后台运行和自动重启
 * 默认使用 `./data` 本地目录做数据持久化，便于直接查看和备份
 * 设置时区为亚洲上海
@@ -297,11 +300,11 @@ docker run -d --name music-dl \
   -e TZ=Asia/Shanghai \
   --user 1000:1000 \
   --restart unless-stopped \
-  guohuiyuan/go-music-dl:latest \
+  ghcr.io/simple-alone/go-music-dl:latest \
   ./music-dl web --port 8080 --no-browser
 
 # Windows PowerShell
-docker run -d --name music-dl -p 8080:8080 -v ${PWD}/data:/home/appuser/data -e TZ=Asia/Shanghai --user 1000:1000 --restart unless-stopped guohuiyuan/go-music-dl:latest ./music-dl web --port 8080 --no-browser
+docker run -d --name music-dl -p 8080:8080 -v ${PWD}/data:/home/appuser/data -e TZ=Asia/Shanghai --user 1000:1000 --restart unless-stopped ghcr.io/simple-alone/go-music-dl:latest ./music-dl web --port 8080 --no-browser
 
 ```
 
@@ -461,14 +464,15 @@ IOS_UNSIGNED_ONLY=1 ./package_ios.sh
 
 > 注意：`music-dl-ios-unsigned.ipa` 不是可直接安装包，需要用户用自己的证书和 provisioning profile 重签。如果需要 GitHub Actions 自动发布已签名 iOS 包，需要配置 `IOS_PROVISION_PROFILE_BASE64`、`IOS_CERTIFICATE_P12_BASE64` 和 `IOS_CERTIFICATE_PASSWORD`。
 
-**如果你 Fork 了本仓库并希望使用自己的构建流：**
+**Fork 镜像构建流：**
 
-1. 在你的仓库 **Settings** -> **Secrets and variables** -> **Actions** 中添加：
+`.github/workflows/docker.yml` 会在推送 `main`、推送 `v*` 标签或手动运行时，使用仓库自带的 `GITHUB_TOKEN` 将 amd64/arm64 镜像发布到 `ghcr.io/simple-alone/go-music-dl`，无需配置 Docker Hub 密钥。首次成功后，在 GitHub 的 **Packages** 设置中将包可见性设为 `Public`。
 
-* `DOCKERHUB_USERNAME`: 你的 DockerHub 用户名
-* `DOCKERHUB_TOKEN`: 你的 DockerHub 访问令牌
+生产部署可用 `MUSIC_DL_IMAGE` 锁定某个不变的提交镜像：
 
-2. 将 `docker-compose.yml` 中的镜像地址修改为你自己的：`image: 你的用户名/go-music-dl:latest`
+```bash
+MUSIC_DL_IMAGE=ghcr.io/simple-alone/go-music-dl:sha-<commit> docker compose up -d
+```
 
 ## Web 换源说明
 

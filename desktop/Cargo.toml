@@ -5,7 +5,7 @@ edition = "2021"
 license = "AGPL-3.0"
 description = "A desktop GUI for music-dl"
 authors = ["guohuiyuan"]
-repository = "https://github.com/guohuiyuan/go-music-dl"
+repository = "https://github.com/Simple-Alone/go-music-dl"
 
 [dependencies]
 tao = "0.30"

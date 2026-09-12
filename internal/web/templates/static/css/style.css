@@ -737,6 +737,36 @@ body.vg-open .aplayer.aplayer-fixed {
     margin-top: 6px;
 }
 
+.legal-notice {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 14px;
+    margin: 28px 0 110px;
+    color: var(--text-sub);
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.legal-notice-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+
+.legal-notice a {
+    color: #047857;
+    font-weight: 700;
+}
+
+.auth-card .legal-notice {
+    margin: 22px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+}
+
 /* Modals */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1001; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
 .modal { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
@@ -1831,4 +1861,3 @@ body.karaoke-lyrics-active .aplayer .aplayer-lrc p.aplayer-lrc-current {
     }
 
     
-

@@ -640,3 +640,22 @@ func TestPaginationTemplatesExposeShortcutMetadata(t *testing.T) {
 		}
 	}
 }
+
+func TestLegalNoticeOffersModifiedAndUpstreamSource(t *testing.T) {
+	content, err := templateFS.ReadFile("templates/partials/legal_notice.html")
+	if err != nil {
+		t.Fatalf("ReadFile(legal_notice.html): %v", err)
+	}
+
+	html := string(content)
+	for _, want := range []string{
+		"GNU AGPL v3",
+		"https://github.com/Simple-Alone/go-music-dl",
+		"https://github.com/guohuiyuan/go-music-dl",
+		"不提供任何担保",
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("legal notice missing %q", want)
+		}
+	}
+}

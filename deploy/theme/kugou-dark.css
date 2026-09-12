@@ -1064,6 +1064,18 @@ body.music-client-theme select:focus-visible {
     background: #2f8cff;
 }
 
+.music-client-theme .legal-notice {
+    color: #707b8a;
+}
+
+.music-client-theme .legal-notice a {
+    color: #70b1ff;
+}
+
+.music-client-theme .auth-card .legal-notice {
+    border-top-color: #343b47;
+}
+
 @media (max-width: 1023px) and (min-width: 769px) {
     .music-client-theme .app-sidebar {
         width: 76px;

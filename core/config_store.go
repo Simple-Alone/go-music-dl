@@ -21,7 +21,7 @@ const (
 	DefaultWebPageSize              = 200
 	DefaultCLIPageSize              = 20
 	DefaultWebConcurrency           = 3
-	DefaultUpdateRepoURL            = "https://github.com/guohuiyuan/go-music-dl"
+	DefaultUpdateRepoURL            = "https://github.com/Simple-Alone/go-music-dl"
 	DefaultGithubProxyURL           = "https://edgeone.gh-proxy.com"
 	webSettingsKey                  = "web_settings"
 	webAuthSettingsKey              = "web_auth_settings"

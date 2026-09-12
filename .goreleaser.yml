@@ -89,9 +89,9 @@ archives:
 
 nfpms:
   - license: AGPL 3.0
-    homepage: https://github.com/guohuiyuan/go-music-dl
+    homepage: https://github.com/Simple-Alone/go-music-dl
     file_name_template: "go-music-dl_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     formats:
       - deb
       - rpm
-    maintainer: guohuiyuan
+    maintainer: Simple-Alone

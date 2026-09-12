@@ -12,14 +12,22 @@ music-dl.exe
 
 # Downloads
 downloads/
+data/
 desktop/
 
 # Sensitive files
 cookies.json
+.env
+deploy/*.conf
+*.key
+*.pem
+*.p12
+*.pfx
+*.keystore
+*.mobileprovision
 
 # Documentation
 README.md
-LICENSE
 
 # IDE
 .vscode/
