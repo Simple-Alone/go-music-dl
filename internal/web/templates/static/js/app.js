@@ -49,6 +49,7 @@ let webSettings = {
   cliPageSize: DEFAULT_CLI_PAGE_SIZE,
   autoCheckUpdate: true,
   autoSwitchInvalidSources: true,
+  kugouPreferred: true,
   autoCacheOnPlay: false,
   updateRepoUrl: DEFAULT_UPDATE_REPO_URL,
   githubProxyEnabled: false,
@@ -75,6 +76,7 @@ function normalizeWebSettings(raw) {
     cliPageSize: DEFAULT_CLI_PAGE_SIZE,
     autoCheckUpdate: true,
     autoSwitchInvalidSources: true,
+    kugouPreferred: true,
     autoCacheOnPlay: false,
     updateRepoUrl: DEFAULT_UPDATE_REPO_URL,
     githubProxyEnabled: false,
@@ -133,6 +135,9 @@ function normalizeWebSettings(raw) {
   }
   if (typeof raw.autoSwitchInvalidSources === "boolean") {
     next.autoSwitchInvalidSources = raw.autoSwitchInvalidSources;
+  }
+  if (typeof raw.kugouPreferred === "boolean") {
+    next.kugouPreferred = raw.kugouPreferred;
   }
   if (typeof raw.autoCacheOnPlay === "boolean") {
     next.autoCacheOnPlay = raw.autoCacheOnPlay;
@@ -365,6 +370,13 @@ function applyWebSettings(settings) {
   if (autoSwitchInvalidSourcesToggle) {
     autoSwitchInvalidSourcesToggle.checked =
       webSettings.autoSwitchInvalidSources;
+  }
+
+  const kugouPreferredToggle = document.getElementById(
+    "setting-kugou-preferred",
+  );
+  if (kugouPreferredToggle) {
+    kugouPreferredToggle.checked = webSettings.kugouPreferred;
   }
 
   const autoCacheOnPlayToggle = document.getElementById(
@@ -2536,6 +2548,7 @@ function inspectSong(card) {
         card.querySelector('[id^="bitrate-"]');
 
       if (data.valid) {
+        delete card.dataset.playbackRestricted;
         if (sizeTag) {
           sizeTag.textContent = data.size;
           sizeTag.className = "tag tag-success";
@@ -2556,7 +2569,7 @@ function inspectSong(card) {
         }
       } else {
         if (sizeTag) {
-          sizeTag.textContent = "无效";
+          sizeTag.textContent = data.reason || "无效";
           sizeTag.className = "tag tag-fail";
         }
         if (bitrateTag) {
@@ -2565,6 +2578,10 @@ function inspectSong(card) {
         }
         card.dataset.sortSize = "0";
         card.dataset.sortBitrate = "0";
+        card.dataset.invalidReason = data.reason || "";
+        if (data.restricted) {
+          card.dataset.playbackRestricted = "1";
+        }
       }
       if (songSortMode !== "default") {
         applySongSort();
@@ -3932,6 +3949,8 @@ async function saveCookies() {
     autoSwitchInvalidSources: !!document.getElementById(
       "setting-auto-switch-invalid-sources",
     )?.checked,
+    kugouPreferred: !!document.getElementById("setting-kugou-preferred")
+      ?.checked,
     autoCacheOnPlay: !!document.getElementById("setting-auto-cache-on-play")
       ?.checked,
     updateRepoUrl: webSettings.updateRepoUrl || DEFAULT_UPDATE_REPO_URL,
@@ -4148,6 +4167,7 @@ let defaultDocumentTitle = document.title;
 let mediaSessionSyncTimer = 0;
 let mediaSessionSyncVersion = 0;
 const mediaSessionCoverCache = new Map();
+let kugouPlaybackFallbackInProgress = false;
 
 function mediaSessionControllerSupported() {
   return typeof navigator !== "undefined" && !!navigator.mediaSession;
@@ -4483,6 +4503,76 @@ function switchTrackByOffset(offset) {
 
   ap.list.switch(nextIndex);
   ap.play();
+}
+
+function playbackCardForAudio(audio) {
+  const id = getPlaybackCardID(audio);
+  if (!id) return null;
+  return (
+    Array.from(document.querySelectorAll(".song-card")).find(
+      (card) => String(card.dataset.id || "") === id,
+    ) || null
+  );
+}
+
+function kugouTrackIsTruncated(audio) {
+  if (!webSettings.kugouPreferred || audio?.source !== "kugou") return false;
+  const expectedDuration = Number(audio.duration || 0);
+  const actualDuration = Number(ap?.audio?.duration || 0);
+  if (
+    !Number.isFinite(expectedDuration) ||
+    !Number.isFinite(actualDuration) ||
+    expectedDuration < 90 ||
+    actualDuration <= 0
+  ) {
+    return false;
+  }
+  return (
+    actualDuration + 20 < expectedDuration &&
+    actualDuration / expectedDuration < 0.8
+  );
+}
+
+async function fallbackRestrictedKugouPlayback(reason) {
+  if (!webSettings.kugouPreferred || kugouPlaybackFallbackInProgress) {
+    return false;
+  }
+
+  const audio = getCurrentAPlayerAudio();
+  if (!audio || audio.source !== "kugou") return false;
+  const card = playbackCardForAudio(audio);
+  if (!card || card.dataset.kugouPlaybackFallbackAttempted === "1") {
+    return false;
+  }
+
+  const switchButton = card.querySelector(".btn-switch");
+  if (!switchButton) return false;
+
+  card.dataset.kugouPlaybackFallbackAttempted = "1";
+  kugouPlaybackFallbackInProgress = true;
+  try {
+    ap.pause();
+    showToast("酷狗音源受限", `${reason}，正在查找其他平台的完整版本`, "warning", 3500);
+    const switched = await switchSource(switchButton, { silent: true });
+    if (switched) {
+      showToast("已自动换源", "已切换到可播放的完整版本", "success", 3000);
+      return true;
+    }
+
+    const sizeTag = card.querySelector('[id^="size-"]');
+    if (sizeTag) {
+      sizeTag.textContent = reason;
+      sizeTag.className = "tag tag-fail";
+    }
+    card.dataset.autoSwitchInvalidAttempted = "1";
+    showToast("未找到完整版本", "已跳过当前歌曲", "warning", 3500);
+    if (ap?.list?.audios?.length > 1) {
+      switchTrackByOffset(1);
+    }
+    return false;
+  } finally {
+    kugouPlaybackFallbackInProgress = false;
+  }
 }
 
 function seekCurrentTrack(position) {
@@ -5148,6 +5238,13 @@ ap.audio.addEventListener("seeked", () => KaraokeLyrics.update());
 ap.audio.addEventListener("loadedmetadata", () => {
   KaraokeLyrics.load(getCurrentAPlayerAudio());
   applyPlayerPlaybackRate(playerSpeed);
+  const audio = getCurrentAPlayerAudio();
+  if (kugouTrackIsTruncated(audio)) {
+    void fallbackRestrictedKugouPlayback("检测到试听片段");
+  }
+});
+ap.audio.addEventListener("error", () => {
+  void fallbackRestrictedKugouPlayback("酷狗播放失败");
 });
 ap.audio.addEventListener("emptied", () => {
   applyPlayerPlaybackRate(playerSpeed);
@@ -5594,6 +5691,10 @@ function updateCardWithSong(card, song, options = {}) {
   card.dataset.artist = song.artist || card.dataset.artist;
   card.dataset.cover = song.cover || "";
   card.dataset.extra = serializeSongExtra(song.extra);
+  delete card.dataset.invalidReason;
+  delete card.dataset.playbackRestricted;
+  delete card.dataset.autoSwitchInvalidAttempted;
+  delete card.dataset.kugouPlaybackFallbackAttempted;
 
   const titleEl = card.querySelector(".song-info h3");
   if (titleEl) {
@@ -5794,12 +5895,62 @@ function switchSource(btn, options = {}) {
     });
 }
 
+function isKnownRestrictedKugouCard(card) {
+  if (
+    !webSettings.kugouPreferred ||
+    !card ||
+    card.dataset.source !== "kugou"
+  ) {
+    return false;
+  }
+  if (card.dataset.playbackRestricted === "1") return true;
+  const extra = normalizeSongExtra(card.dataset.extra || "");
+  const privilege = String(extra.privilege || "").trim();
+  return privilege === "8" || privilege === "10";
+}
+
+function switchRestrictedCardBeforePlay(card, playButton, allCards) {
+  const switchButton = card?.querySelector(".btn-switch");
+  if (!switchButton) return;
+
+  showToast("酷狗音源受限", "正在查找其他平台的完整版本", "warning", 3000);
+  void switchSource(switchButton, { silent: true }).then((switched) => {
+    if (switched) {
+      playAllAndJumpTo(playButton);
+      return;
+    }
+
+    showToast("未找到完整版本", "已跳过当前歌曲", "warning", 3500);
+    const currentIndex = allCards.indexOf(card);
+    for (let offset = 1; offset < allCards.length; offset++) {
+      const nextCard = allCards[(currentIndex + offset) % allCards.length];
+      if (isKnownRestrictedKugouCard(nextCard)) continue;
+      const nextButton = nextCard.querySelector(".btn-play");
+      if (nextButton) {
+        playAllAndJumpTo(nextButton);
+        break;
+      }
+    }
+  });
+}
+
 function playAllAndJumpTo(btn) {
   const currentCard = btn.closest(".song-card");
   const allCards = Array.from(document.querySelectorAll(".song-card"));
   const clickedIndex = allCards.indexOf(currentCard);
 
   if (clickedIndex === -1) return;
+
+  if (isKnownRestrictedKugouCard(currentCard)) {
+    switchRestrictedCardBeforePlay(currentCard, btn, allCards);
+    return;
+  }
+
+  const playableCards = allCards.filter(
+    (card) => !isKnownRestrictedKugouCard(card),
+  );
+  const playableIndex = playableCards.indexOf(currentCard);
+  if (playableIndex === -1) return;
 
   const clickedId = currentCard.dataset.id;
   const isActuallyPlaying = ap?.audio && !ap.audio.paused;
@@ -5819,7 +5970,7 @@ function playAllAndJumpTo(btn) {
   ap.list.clear();
   const playlist = [];
 
-  allCards.forEach((card) => {
+  playableCards.forEach((card) => {
     const ds = card.dataset;
     const song = songFromCard(card);
     if (!song) return;
@@ -5870,7 +6021,7 @@ function playAllAndJumpTo(btn) {
   });
 
   ap.list.add(playlist);
-  ap.list.switch(clickedIndex);
+  ap.list.switch(playableIndex);
   ap.play();
 
   currentPlayingId = clickedId;

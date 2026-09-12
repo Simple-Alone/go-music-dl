@@ -14,16 +14,22 @@ import (
 
 func TestDefaultSourcesForSearchType(t *testing.T) {
 	wantAlbum := core.GetAlbumSourceNames()
-	if got := defaultSourcesForSearchType("album"); !reflect.DeepEqual(got, wantAlbum) {
-		t.Fatalf("defaultSourcesForSearchType(album) = %v, want %v", got, wantAlbum)
+	if got := defaultSourcesForSearchTypeSettings("album", false); !reflect.DeepEqual(got, wantAlbum) {
+		t.Fatalf("defaultSourcesForSearchTypeSettings(album, false) = %v, want %v", got, wantAlbum)
 	}
 
-	if got := defaultSourcesForSearchType("playlist"); len(got) == 0 {
-		t.Fatal("defaultSourcesForSearchType(playlist) returned empty sources")
+	if got := defaultSourcesForSearchTypeSettings("playlist", false); len(got) == 0 {
+		t.Fatal("defaultSourcesForSearchTypeSettings(playlist, false) returned empty sources")
 	}
 
-	if got := defaultSourcesForSearchType("song"); len(got) == 0 {
-		t.Fatal("defaultSourcesForSearchType(song) returned empty sources")
+	if got := defaultSourcesForSearchTypeSettings("song", false); len(got) == 0 {
+		t.Fatal("defaultSourcesForSearchTypeSettings(song, false) returned empty sources")
+	}
+
+	for _, searchType := range []string{"song", "playlist", "album"} {
+		if got := defaultSourcesForSearchTypeSettings(searchType, true); !reflect.DeepEqual(got, []string{"kugou"}) {
+			t.Fatalf("defaultSourcesForSearchTypeSettings(%s, true) = %v, want [kugou]", searchType, got)
+		}
 	}
 }
 

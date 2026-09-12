@@ -73,6 +73,29 @@ func TestAppJSAutoSwitchInvalidSources(t *testing.T) {
 	}
 }
 
+func TestAppJSKugouPreferredPlaybackFallback(t *testing.T) {
+	content, err := templateFS.ReadFile("templates/static/js/app.js")
+	if err != nil {
+		t.Fatalf("ReadFile(app.js): %v", err)
+	}
+
+	js := string(content)
+	for _, want := range []string{
+		"kugouPreferred: true",
+		"function kugouTrackIsTruncated(audio)",
+		"async function fallbackRestrictedKugouPlayback(reason)",
+		"function isKnownRestrictedKugouCard(card)",
+		"function switchRestrictedCardBeforePlay(card, playButton, allCards)",
+		"playableCards.forEach((card) => {",
+		`fallbackRestrictedKugouPlayback("检测到试听片段")`,
+		`fallbackRestrictedKugouPlayback("酷狗播放失败")`,
+	} {
+		if !strings.Contains(js, want) {
+			t.Fatalf("app.js missing %q", want)
+		}
+	}
+}
+
 func TestFindBestSwitchSongReturnsBeforeSlowSourcesOnHighConfidenceMatch(t *testing.T) {
 	withSwitchSourceTestHooks(t)
 

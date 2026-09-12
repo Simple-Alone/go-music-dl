@@ -763,6 +763,43 @@ func BuildSourceRequest(method, urlStr, source, rangeHeader string) (*http.Reque
 	return req, nil
 }
 
+const strictPlaybackMinBitrateKbps = 80
+
+// IsKugouRestrictedSong identifies the privilege values that music-lib routes
+// through Kugou's paid-quality lookup. The strict mode intentionally prefers
+// a false positive over playing a truncated preview.
+func IsKugouRestrictedSong(song *model.Song) bool {
+	if song == nil || song.Source != "kugou" || song.Extra == nil {
+		return false
+	}
+	privilege, err := strconv.Atoi(strings.TrimSpace(song.Extra["privilege"]))
+	if err != nil {
+		return false
+	}
+	return privilege == 8 || privilege == 10
+}
+
+// IsLikelyIncompleteAudio rejects obvious preview files by comparing their
+// total byte size with the catalog duration. Short tracks are excluded because
+// their estimates are too noisy to use as a reliable signal.
+func IsLikelyIncompleteAudio(size int64, duration int) bool {
+	if size <= 0 || duration < 90 {
+		return false
+	}
+	estimatedBitrate := (size * 8) / int64(duration) / 1000
+	return estimatedBitrate > 0 && estimatedBitrate < strictPlaybackMinBitrateKbps
+}
+
+func sourceResponseSize(resp *http.Response) int64 {
+	if resp == nil {
+		return 0
+	}
+	if total, ok := parseContentRangeTotal(resp.Header.Get("Content-Range")); ok {
+		return total
+	}
+	return resp.ContentLength
+}
+
 func ValidatePlayable(song *model.Song) bool {
 	if song == nil || song.ID == "" || song.Source == "" {
 		return false
@@ -770,11 +807,16 @@ func ValidatePlayable(song *model.Song) bool {
 	if song.Source == "soda" || song.Source == "fivesing" || song.Source == "local" || song.Source == "local-file" {
 		return false
 	}
+	strictPlayback := GetWebSettings().KugouPreferred
+	if strictPlayback && (song.IsVIP || IsKugouRestrictedSong(song)) {
+		return false
+	}
 	fn := GetDownloadFunc(song.Source)
 	if fn == nil {
 		return false
 	}
-	urlStr, err := fn(&model.Song{ID: song.ID, Source: song.Source})
+	probeSong := *song
+	urlStr, err := fn(&probeSong)
 	if err != nil || urlStr == "" {
 		return false
 	}
@@ -790,7 +832,10 @@ func ValidatePlayable(song *model.Song) bool {
 		return false
 	}
 	defer resp.Body.Close()
-	return resp.StatusCode == 200 || resp.StatusCode == 206
+	if resp.StatusCode != 200 && resp.StatusCode != 206 {
+		return false
+	}
+	return !strictPlayback || !IsLikelyIncompleteAudio(sourceResponseSize(resp), song.Duration)
 }
 
 // ==========================================

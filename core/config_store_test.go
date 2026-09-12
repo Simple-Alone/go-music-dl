@@ -125,6 +125,9 @@ func TestWebSettingsDefaultAndPersist(t *testing.T) {
 	if !defaults.AutoSwitchInvalidSources {
 		t.Fatalf("default AutoSwitchInvalidSources should be true")
 	}
+	if !defaults.KugouPreferred {
+		t.Fatalf("default KugouPreferred should be true")
+	}
 	if defaults.AutoCacheOnPlay {
 		t.Fatalf("default AutoCacheOnPlay should be false")
 	}
@@ -166,6 +169,7 @@ func TestWebSettingsDefaultAndPersist(t *testing.T) {
 		DownloadConcurrency:      5,
 		AutoCheckUpdate:          false,
 		AutoSwitchInvalidSources: false,
+		KugouPreferred:           true,
 		AutoCacheOnPlay:          true,
 		UpdateRepoURL:            "https://github.com/example/fork",
 		GithubProxyEnabled:       true,
@@ -195,6 +199,7 @@ func TestWebSettingsDefaultAndPersist(t *testing.T) {
 		DownloadConcurrency:      5,
 		AutoCheckUpdate:          false,
 		AutoSwitchInvalidSources: false,
+		KugouPreferred:           true,
 		AutoCacheOnPlay:          true,
 		UpdateRepoURL:            "https://github.com/example/fork",
 		GithubProxyEnabled:       true,
@@ -294,6 +299,9 @@ func TestWebSettingsLegacyPayloadUsesCurrentSwitchDefaults(t *testing.T) {
 	got := GetWebSettings()
 	if !got.AutoSwitchInvalidSources {
 		t.Fatalf("legacy settings should default AutoSwitchInvalidSources to true: %#v", got)
+	}
+	if !got.KugouPreferred {
+		t.Fatalf("legacy settings should default KugouPreferred to true: %#v", got)
 	}
 	if got.AutoCacheOnPlay {
 		t.Fatalf("legacy settings should default AutoCacheOnPlay to false: %#v", got)

@@ -587,6 +587,11 @@ func RegisterMusicRoutes(api, configAPI *gin.RouterGroup) {
 		if searchType == "song" && exactArtist != "" && len(allSongs) > 0 {
 			allSongs = filterSongsByExactArtist(allSongs, exactArtist)
 		}
+		if searchType == "song" && core.GetWebSettings().KugouPreferred && len(allSongs) > 1 {
+			sort.SliceStable(allSongs, func(i, j int) bool {
+				return allSongs[i].Source == "kugou" && allSongs[j].Source != "kugou"
+			})
+		}
 
 		renderIndex(c, allSongs, allPlaylists, keyword, sources, errorMsg, searchType, "", "", "", false, "", importCollection)
 	})
@@ -682,10 +687,22 @@ func RegisterMusicRoutes(api, configAPI *gin.RouterGroup) {
 		src := c.Query("source")
 		durStr := c.Query("duration")
 		extra := parseSongExtraQuery(c.Query("extra"))
+		duration, _ := strconv.Atoi(durStr)
+		settings := core.GetWebSettings()
 
 		if isLocalMusicSource(src) {
 			payload, _ := inspectLocalMusicFile(id, durStr)
 			c.JSON(200, payload)
+			return
+		}
+
+		probeSong := &model.Song{ID: id, Source: src, Duration: duration, Extra: extra}
+		if settings.KugouPreferred && core.IsKugouRestrictedSong(probeSong) {
+			c.JSON(200, gin.H{
+				"valid":      false,
+				"restricted": true,
+				"reason":     "VIP/付费",
+			})
 			return
 		}
 
@@ -740,19 +757,28 @@ func RegisterMusicRoutes(api, configAPI *gin.RouterGroup) {
 		}
 
 		bitrate := "-"
+		restricted := false
+		reason := ""
+		if valid && settings.KugouPreferred && core.IsLikelyIncompleteAudio(size, duration) {
+			valid = false
+			restricted = true
+			reason = "疑似试听"
+		}
+
 		if valid && size > 0 {
-			dur, _ := strconv.Atoi(durStr)
-			if dur > 0 {
-				kbps := int((size * 8) / int64(dur) / 1000)
+			if duration > 0 {
+				kbps := int((size * 8) / int64(duration) / 1000)
 				bitrate = fmt.Sprintf("%d kbps", kbps)
 			}
 		}
 
 		c.JSON(200, gin.H{
-			"valid":   valid,
-			"url":     urlStr,
-			"size":    core.FormatSize(size),
-			"bitrate": bitrate,
+			"valid":      valid,
+			"url":        urlStr,
+			"size":       core.FormatSize(size),
+			"bitrate":    bitrate,
+			"restricted": restricted,
+			"reason":     reason,
 		})
 	})
 

@@ -42,6 +42,13 @@ type importCollectionMeta struct {
 }
 
 func defaultSourcesForSearchType(searchType string) []string {
+	return defaultSourcesForSearchTypeSettings(searchType, core.GetWebSettings().KugouPreferred)
+}
+
+func defaultSourcesForSearchTypeSettings(searchType string, kugouPreferred bool) []string {
+	if kugouPreferred {
+		return []string{"kugou"}
+	}
 	switch searchType {
 	case "playlist":
 		return core.GetPlaylistSourceNames()

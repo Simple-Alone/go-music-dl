@@ -55,6 +55,7 @@ type WebSettings struct {
 	DownloadConcurrency      int    `json:"downloadConcurrency"`
 	AutoCheckUpdate          bool   `json:"autoCheckUpdate"`
 	AutoSwitchInvalidSources bool   `json:"autoSwitchInvalidSources"`
+	KugouPreferred           bool   `json:"kugouPreferred"`
 	AutoCacheOnPlay          bool   `json:"autoCacheOnPlay"`
 	UpdateRepoURL            string `json:"updateRepoUrl"`
 	GithubProxyEnabled       bool   `json:"githubProxyEnabled"`
@@ -176,6 +177,7 @@ func defaultWebSettings() WebSettings {
 		DownloadConcurrency:      DefaultWebConcurrency,
 		AutoCheckUpdate:          true,
 		AutoSwitchInvalidSources: true,
+		KugouPreferred:           true,
 		AutoCacheOnPlay:          false,
 		UpdateRepoURL:            DefaultUpdateRepoURL,
 		GithubProxyEnabled:       false,
