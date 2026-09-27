@@ -124,6 +124,32 @@ type playlistCategoryCurrent struct {
 	SourceName   string
 	CategoryID   string
 	CategoryName string
+	SortOptions  []playlistCategorySortOption
+}
+
+type playlistCategorySortOption struct {
+	Name   string
+	URL    string
+	Active bool
+}
+
+var kugouDesktopPlaylistPageProvider = core.GetKugouDesktopPlaylistPage
+
+func loadKugouDesktopPlaylistPage(categoryID string, page, pageSize, sortID int) (core.KugouDesktopPlaylistPage, error) {
+	result, err := kugouDesktopPlaylistPageProvider(categoryID, page, pageSize, sortID)
+	if err != nil || page <= 1 || result.Total > 0 || len(result.Playlists) > 0 {
+		return result, err
+	}
+
+	firstPage, err := kugouDesktopPlaylistPageProvider(categoryID, 1, pageSize, sortID)
+	if err != nil || firstPage.Total <= 0 {
+		return firstPage, err
+	}
+	lastPage := (firstPage.Total + firstPage.PageSize - 1) / firstPage.PageSize
+	if lastPage <= 1 {
+		return firstPage, nil
+	}
+	return kugouDesktopPlaylistPageProvider(categoryID, lastPage, firstPage.PageSize, sortID)
 }
 
 func playlistCategorySourcesFromQuery(c *gin.Context) []string {
@@ -349,6 +375,18 @@ func playlistCategoryPlaylistsURL(source string, category model.PlaylistCategory
 	return RoutePrefix + "/category_playlists?" + values.Encode()
 }
 
+func playlistCategorySortURL(source, categoryID, categoryName string, sortID, pageSize int) string {
+	values := url.Values{}
+	values.Set("source", source)
+	values.Set("category_id", categoryID)
+	values.Set("category_name", categoryName)
+	values.Set("sort", strconv.Itoa(sortID))
+	if pageSize > 0 {
+		values.Set("page_size", strconv.Itoa(pageSize))
+	}
+	return RoutePrefix + "/category_playlists?" + values.Encode()
+}
+
 func RegisterMusicRoutes(api, configAPI *gin.RouterGroup) {
 	registerGuessYouLikeRoute(api)
 
@@ -420,7 +458,31 @@ func RegisterMusicRoutes(api, configAPI *gin.RouterGroup) {
 			return
 		}
 
-		playlists, err := fn(categoryID, 1, 120)
+		var playlists []model.Playlist
+		var err error
+		sortID := 5
+		page, pageSize := requestIndexPagination(c)
+		if raw := strings.TrimSpace(c.Query("sort")); raw != "" {
+			if parsed, parseErr := strconv.Atoi(raw); parseErr == nil {
+				sortID = parsed
+			}
+		}
+		if source == "kugou" && core.IsKugouDesktopPlaylistCategoryID(categoryID) {
+			result, fetchErr := loadKugouDesktopPlaylistPage(categoryID, page, pageSize, sortID)
+			playlists = result.Playlists
+			err = fetchErr
+			if fetchErr == nil {
+				page = result.Page
+				pageSize = result.PageSize
+				c.Set("IndexPaginationOverride", indexPaginationOverride{
+					Page:       result.Page,
+					PageSize:   result.PageSize,
+					TotalCount: result.Total,
+				})
+			}
+		} else {
+			playlists, err = fn(categoryID, 1, 120)
+		}
 		for i := range playlists {
 			playlists[i].Source = source
 		}
@@ -431,12 +493,22 @@ func RegisterMusicRoutes(api, configAPI *gin.RouterGroup) {
 		}
 
 		sourceName := core.GetSourceDescription(source)
-		c.Set("PlaylistCategoryCurrent", playlistCategoryCurrent{
+		current := playlistCategoryCurrent{
 			Source:       source,
 			SourceName:   sourceName,
 			CategoryID:   categoryID,
 			CategoryName: categoryName,
-		})
+		}
+		if source == "kugou" && core.IsKugouDesktopPlaylistCategoryID(categoryID) {
+			for _, option := range core.KugouDesktopPlaylistSorts() {
+				current.SortOptions = append(current.SortOptions, playlistCategorySortOption{
+					Name:   option.Name,
+					URL:    playlistCategorySortURL(source, categoryID, categoryName, option.ID, pageSize),
+					Active: option.ID == sortID,
+				})
+			}
+		}
+		c.Set("PlaylistCategoryCurrent", current)
 		renderIndex(c, nil, playlists, sourceName+" · "+categoryName, []string{source}, errMsg, "playlist", "", "", "", false, "", nil)
 	})
 

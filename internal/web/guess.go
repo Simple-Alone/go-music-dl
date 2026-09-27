@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math/rand"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,14 +20,23 @@ const (
 )
 
 type guessYouLikeData struct {
-	Enabled bool
-	Seeds   []string
-	Message string
+	Enabled      bool
+	Mode         string
+	SourceLabel  string
+	Seeds        []string
+	Message      string
+	Cursor       string
+	NativeFailed bool
+	CanUseLocal  bool
 }
 
 var guessSearchFuncProvider = func(source string) core.SearchFunc {
 	return core.GetSearchFunc(source)
 }
+
+var guessKugouLoggedIn = core.KugouPersonalRecommendationLoggedIn
+
+var guessKugouPersonalProvider = core.GetKugouPersonalRecommendations
 
 func normalizeGuessArtists(values []string) []string {
 	artists := make([]string, 0, maxGuessArtists)
@@ -138,8 +148,52 @@ func loadGuessSongs(artists []string, excluded map[string]struct{}, refresh stri
 func registerGuessYouLikeRoute(api *gin.RouterGroup) {
 	api.GET("/guess_you_like", func(c *gin.Context) {
 		artists := normalizeGuessArtists(c.QueryArray("artists"))
-		page := guessYouLikeData{Enabled: true, Seeds: artists}
+		forceLocal := c.Query("mode") == "local"
+		useNative := !forceLocal && guessKugouLoggedIn()
+		page := guessYouLikeData{
+			Enabled:     true,
+			Mode:        "local",
+			SourceLabel: "本机播放记录推荐",
+			Seeds:       artists,
+			CanUseLocal: len(artists) > 0,
+		}
 		c.Set("GuessYouLike", page)
+
+		if useNative {
+			page.Mode = "native"
+			page.SourceLabel = "酷狗原生推荐"
+			page.Seeds = nil
+			action := "login"
+			if strings.TrimSpace(c.Query("refresh")) != "" {
+				action = "play"
+			}
+			playTime, _ := strconv.Atoi(c.Query("play_time"))
+			remainSongCount, _ := strconv.Atoi(c.Query("remain_songcnt"))
+			result, err := guessKugouPersonalProvider(core.KugouPersonalRecommendOptions{
+				Action:          action,
+				Hash:            c.Query("hash"),
+				SongID:          c.Query("song_id"),
+				PlayTime:        playTime,
+				Cursor:          c.Query("cursor"),
+				RemainSongCount: remainSongCount,
+				IsOverplay:      c.Query("overplay") == "1",
+			})
+			songs := result.Songs
+			if err != nil {
+				page.NativeFailed = true
+				page.Message = "酷狗原生推荐加载失败：" + err.Error()
+				songs = nil
+			} else {
+				page.Cursor = result.Cursor
+				songs = filterGuessSongs(songs, guessExcludedIDs(c.QueryArray("exclude")))
+				if len(songs) == 0 {
+					page.Message = "这一批没有新的推荐歌曲，试试换一批。"
+				}
+			}
+			c.Set("GuessYouLike", page)
+			renderIndex(c, songs, nil, "", []string{"kugou"}, "", "song", "", "", "", false, "", nil)
+			return
+		}
 
 		if len(artists) == 0 {
 			page.Message = "播放几首喜欢的歌曲后，这里会出现为你挑选的音乐。"
@@ -157,4 +211,25 @@ func registerGuessYouLikeRoute(api *gin.RouterGroup) {
 		c.Set("GuessYouLike", page)
 		renderIndex(c, songs, nil, "", []string{"kugou"}, "", "song", "", "", "", false, "", nil)
 	})
+}
+
+func filterGuessSongs(songs []model.Song, excluded map[string]struct{}) []model.Song {
+	filtered := make([]model.Song, 0, len(songs))
+	seen := make(map[string]struct{}, len(songs))
+	for _, song := range songs {
+		id := strings.TrimSpace(song.ID)
+		if id == "" || strings.TrimSpace(song.Name) == "" {
+			continue
+		}
+		if _, skip := excluded[id]; skip {
+			continue
+		}
+		if _, duplicate := seen[id]; duplicate {
+			continue
+		}
+		seen[id] = struct{}{}
+		song.Source = "kugou"
+		filtered = append(filtered, song)
+	}
+	return filtered
 }

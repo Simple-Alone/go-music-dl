@@ -702,7 +702,10 @@ function updateCoverButton(link) {
 }
 
 function refreshDownloadLinks(root = document) {
-  root.querySelectorAll(".song-card").forEach((card) => {
+  const cards = root.matches?.(".song-card")
+    ? [root]
+    : Array.from(root.querySelectorAll(".song-card"));
+  cards.forEach((card) => {
     updateDownloadButton(card.querySelector(".btn-download"));
     updateBrowserDownloadButton(card.querySelector(".btn-browser-download"));
     updateLyricButton(card.querySelector(".btn-lyric"));
@@ -999,7 +1002,9 @@ function bindSearchForm(root = document) {
 }
 
 function bindSongCardCovers(root = document) {
-  const cards = root.querySelectorAll(".song-card");
+  const cards = root.matches?.(".song-card")
+    ? [root]
+    : Array.from(root.querySelectorAll(".song-card"));
   cards.forEach((card, index) => {
     queueInspectSong(card, index * INSPECT_REQUEST_DELAY_MS);
 
@@ -1191,6 +1196,7 @@ function initializePageContent(root = document) {
   bindSearchForm(root);
   bindSongSortControls(root);
   bindSongListTools(root);
+  initializeKugouFMPage(root);
 
   const initialTypeEl = root.querySelector('input[name="type"]:checked');
   if (initialTypeEl) {
@@ -1731,7 +1737,7 @@ function guessArtistSeeds(entries) {
   return seeds;
 }
 
-function guessYouLikeURL(refresh = false) {
+function guessYouLikeURL(refresh = false, mode = "") {
   const history = readPlaybackHistory();
   const params = new URLSearchParams();
   guessArtistSeeds(history).forEach((artist) => params.append("artists", artist));
@@ -1739,6 +1745,7 @@ function guessYouLikeURL(refresh = false) {
     .filter((entry) => entry.source === "kugou" && entry.id)
     .slice(0, 60)
     .forEach((entry) => params.append("exclude", String(entry.id)));
+  if (mode === "local") params.set("mode", "local");
   if (refresh) params.set("refresh", String(Date.now()));
   const query = params.toString();
   return `${API_ROOT}/guess_you_like${query ? `?${query}` : ""}`;
@@ -1748,8 +1755,153 @@ function goToGuessYouLike() {
   navigateTo(guessYouLikeURL(false));
 }
 
-function refreshGuessYouLike() {
-  navigateTo(guessYouLikeURL(true), { historyMode: "replace", scroll: false });
+function refreshGuessYouLike(mode = "") {
+  navigateTo(guessYouLikeURL(true, mode), { historyMode: "replace", scroll: false });
+}
+
+function useLocalGuessYouLike() {
+  navigateTo(guessYouLikeURL(true, "local"), { historyMode: "replace", scroll: false });
+}
+
+const KUGOU_FM_PREFETCH_THRESHOLD = 2;
+let kugouFMLoadInProgress = false;
+let kugouFMRetryAfter = 0;
+let kugouFMPageSession = 0;
+
+function initializeKugouFMPage(root = document) {
+  const scope = root && typeof root.querySelector === "function" ? root : document;
+  const section = scope.querySelector('.guess-you-like[data-mode="native"]');
+  if (!section) return;
+  kugouFMPageSession += 1;
+  section.dataset.session = String(kugouFMPageSession);
+  kugouFMLoadInProgress = false;
+  kugouFMRetryAfter = 0;
+}
+
+function activeKugouFMSection() {
+  return document.querySelector('.guess-you-like[data-mode="native"]');
+}
+
+function currentKugouFMSession() {
+  return String(activeKugouFMSection()?.dataset.session || "");
+}
+
+function updateKugouFMResultCount() {
+  const total = document.querySelectorAll(".result-list .song-card").length;
+  const count = document.getElementById("guess-result-count");
+  if (count) count.textContent = String(total);
+  const summary = document.getElementById("guess-page-summary");
+  if (summary) summary.textContent = `已加载 ${total} 首`;
+}
+
+function kugouFMContinuationURL(audio, remaining) {
+  const section = activeKugouFMSection();
+  if (!section || !audio) return "";
+  const extra = normalizeSongExtra(audio.extra);
+  const url = new URL(guessYouLikeURL(true), window.location.origin);
+  const hash = String(
+    audio.kugou_fm_hash || extra.hash || audio.original_id || audio.custom_id || "",
+  ).trim();
+  const songID = String(
+    audio.kugou_fm_song_id || extra.audio_id || extra.album_audio_id || "",
+  ).trim();
+  const cursor = String(section.dataset.cursor || "").trim();
+  if (hash) url.searchParams.set("hash", hash);
+  if (songID) url.searchParams.set("song_id", songID);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  url.searchParams.set("play_time", String(Math.max(0, Math.floor(ap?.audio?.currentTime || 0))));
+  url.searchParams.set("remain_songcnt", String(Math.max(0, remaining)));
+  return url.toString();
+}
+
+async function loadMoreKugouFM(audio, remaining) {
+  const section = activeKugouFMSection();
+  const session = currentKugouFMSession();
+  const requestURL = kugouFMContinuationURL(audio, remaining);
+  if (!section || !session || !requestURL || kugouFMLoadInProgress) return;
+
+  kugouFMLoadInProgress = true;
+  try {
+    const response = await fetch(requestURL, {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const html = await response.text();
+    const nextDoc = new DOMParser().parseFromString(html, "text/html");
+    const nextSection = nextDoc.querySelector('.guess-you-like[data-mode="native"]');
+    const nextList = nextDoc.querySelector(".result-list");
+    const currentSection = activeKugouFMSection();
+    const currentList = document.querySelector(".result-list");
+    if (!currentSection || !currentList || currentKugouFMSession() !== session) {
+      return;
+    }
+    if (!nextSection || !nextList) {
+      const message = nextDoc.querySelector(".guess-empty-state")?.textContent?.trim();
+      throw new Error(message || "酷狗没有返回下一批推荐歌曲");
+    }
+
+    const nextCursor = String(nextSection.dataset.cursor || "").trim();
+    if (nextCursor) currentSection.dataset.cursor = nextCursor;
+
+    const fmCardKey = (card) =>
+      String(card.dataset.kugouFmHash || card.dataset.id || "");
+    const existing = new Set(
+      Array.from(currentList.querySelectorAll(".song-card")).map(fmCardKey),
+    );
+    const appended = [];
+    nextList.querySelectorAll(".song-card").forEach((card) => {
+      const key = fmCardKey(card);
+      if (!key || existing.has(key)) return;
+      existing.add(key);
+      const imported = document.importNode(card, true);
+      currentList.appendChild(imported);
+      appended.push(imported);
+    });
+
+    if (appended.length === 0) {
+      throw new Error("酷狗暂时没有返回新的推荐歌曲");
+    }
+
+    appended.forEach((card) => {
+      refreshDownloadLinks(card);
+      bindSongCardCovers(card);
+    });
+    ensureSongSortIndexes(currentList);
+    updateBatchToolbar();
+    updateKugouFMResultCount();
+
+    const currentAudio = getCurrentAPlayerAudio();
+    if (currentAudio?.kugou_fm_session === session) {
+      const additions = appended
+        .map((card) => buildPlaybackAudioFromCard(card))
+        .filter(Boolean);
+      if (additions.length > 0) ap.list.add(additions);
+    }
+    kugouFMRetryAfter = 0;
+  } catch (error) {
+    kugouFMRetryAfter = Date.now() + 5000;
+    showToast(
+      "酷狗推荐补充失败",
+      error?.message || "请稍后重试",
+      "warning",
+      3500,
+    );
+  } finally {
+    kugouFMLoadInProgress = false;
+  }
+}
+
+function maybeExtendKugouFMQueue() {
+  if (!ap?.list || !Array.isArray(ap.list.audios)) return;
+  const section = activeKugouFMSection();
+  const session = currentKugouFMSession();
+  const audio = getCurrentAPlayerAudio();
+  if (!section || !session || audio?.kugou_fm_session !== session) return;
+  if (kugouFMLoadInProgress || Date.now() < kugouFMRetryAfter) return;
+  const index = Number.isInteger(ap.list.index) ? ap.list.index : 0;
+  const remaining = Math.max(0, ap.list.audios.length - index - 1);
+  if (remaining > KUGOU_FM_PREFETCH_THRESHOLD) return;
+  void loadMoreKugouFM(audio, remaining);
 }
 
 function switchCategorySource(tab) {
@@ -5405,6 +5557,7 @@ ap.on("listswitch", (e) => {
   syncMediaSession(newAudio || getCurrentAPlayerAudio());
   scheduleMediaSessionSync(newAudio || getCurrentAPlayerAudio(), 180);
   KaraokeLyrics.load(newAudio || getCurrentAPlayerAudio());
+  maybeExtendKugouFMQueue();
 });
 
 ap.on("play", () => {
@@ -5430,6 +5583,7 @@ ap.on("play", () => {
   if (window.VideoGen && window.VideoGen.updatePlayBtnState) {
     window.VideoGen.updatePlayBtnState(true);
   }
+  maybeExtendKugouFMQueue();
 });
 
 ap.on("pause", () => {
@@ -5934,6 +6088,53 @@ function switchRestrictedCardBeforePlay(card, playButton, allCards) {
   });
 }
 
+function buildPlaybackAudioFromCard(card) {
+  const song = songFromCard(card);
+  if (!song) return null;
+  const ds = card.dataset;
+  const localMatch = localMusicMatchCache[ds.id];
+  const useLocal = localMatch && localMatch.id;
+  const playbackSong = useLocal
+    ? {
+        id: localMatch.id,
+        source: "local",
+        name: localMatch.name || song.name,
+        artist: localMatch.artist || song.artist,
+        album: song.album || "",
+        cover: song.cover || "",
+        duration: song.duration || 0,
+        extra: song.extra || "",
+      }
+    : song;
+  const lyricURLs = lyricURLsForPlayback(playbackSong);
+  return {
+    name: playbackSong.name,
+    artist: playbackSong.artist,
+    album: playbackSong.album || "",
+    url: buildStreamURL(
+      playbackSong.id,
+      playbackSong.source,
+      playbackSong.name,
+      playbackSong.artist,
+      playbackSong.album || "",
+      playbackSong.cover || "",
+      playbackSong.extra || "",
+    ),
+    cover: song.cover || "",
+    lrc: lyricURLs.line,
+    raw_lrc: lyricURLs.auto,
+    theme: "#10b981",
+    custom_id: playbackSong.id,
+    original_id: ds.id,
+    source: playbackSong.source,
+    duration: playbackSong.duration || parsePositiveInt(ds.duration, 0),
+    extra: playbackSong.extra || "",
+    kugou_fm_session: currentKugouFMSession(),
+    kugou_fm_hash: ds.kugouFmHash || "",
+    kugou_fm_song_id: ds.kugouFmSongId || "",
+  };
+}
+
 function playAllAndJumpTo(btn) {
   const currentCard = btn.closest(".song-card");
   const allCards = Array.from(document.querySelectorAll(".song-card"));
@@ -5968,57 +6169,10 @@ function playAllAndJumpTo(btn) {
   }
 
   ap.list.clear();
-  const playlist = [];
 
-  playableCards.forEach((card) => {
-    const ds = card.dataset;
-    const song = songFromCard(card);
-    if (!song) return;
-    let coverUrl = ds.cover || "";
-    const imgEl = card.querySelector(".cover-wrapper img");
-    if (imgEl && imgEl.src) coverUrl = imgEl.src;
-
-    const localMatch = localMusicMatchCache[ds.id];
-    const useLocal = localMatch && localMatch.id;
-    const playbackSong = useLocal
-      ? {
-          id: localMatch.id,
-          source: "local",
-          name: localMatch.name || song.name,
-          artist: localMatch.artist || song.artist,
-          album: song.album || "",
-          cover: song.cover || "",
-          duration: song.duration || 0,
-          extra: song.extra || "",
-        }
-      : song;
-    const lyricURLs = lyricURLsForPlayback(playbackSong);
-    const streamUrl = buildStreamURL(
-      playbackSong.id,
-      playbackSong.source,
-      playbackSong.name,
-      playbackSong.artist,
-      playbackSong.album || "",
-      playbackSong.cover || "",
-      playbackSong.extra || "",
-    );
-
-    playlist.push({
-      name: playbackSong.name,
-      artist: playbackSong.artist,
-      album: playbackSong.album || "",
-      url: streamUrl,
-      cover: coverUrl,
-      lrc: lyricURLs.line,
-      raw_lrc: lyricURLs.auto,
-      theme: "#10b981",
-      custom_id: playbackSong.id,
-      original_id: ds.id,
-      source: playbackSong.source,
-      duration: playbackSong.duration || parsePositiveInt(ds.duration, 0),
-      extra: playbackSong.extra || "",
-    });
-  });
+  const playlist = playableCards
+    .map((card) => buildPlaybackAudioFromCard(card))
+    .filter(Boolean);
 
   ap.list.add(playlist);
   ap.list.switch(playableIndex);

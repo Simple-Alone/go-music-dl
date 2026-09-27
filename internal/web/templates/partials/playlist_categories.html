@@ -6,6 +6,13 @@
             <span class="category-current-badge"><i class="fa-solid fa-layer-group"></i> 当前分类</span>
             <div class="category-current-title">{{ .SourceName }}<span class="category-current-sep">·</span>{{ .CategoryName }}</div>
             <div class="category-current-subtitle">点击歌单卡片可进入详情，或返回选择其他分类。</div>
+            {{ if .SortOptions }}
+            <nav class="category-sort-tabs" aria-label="频道排序">
+                {{ range .SortOptions }}
+                <a class="category-sort-tab{{ if .Active }} is-active{{ end }}" href="{{ .URL }}" onclick="event.preventDefault(); navigateTo(this.href)">{{ .Name }}</a>
+                {{ end }}
+            </nav>
+            {{ end }}
         </div>
         <a class="btn-pill btn-pill-switch" href="{{$.Root}}/playlist_categories" onclick="event.preventDefault(); navigateTo(this.href)">
             <i class="fa-solid fa-arrow-left"></i> 返回分类
@@ -19,7 +26,7 @@
     <header class="category-panel-header">
         <div class="category-panel-title">
             <h2><i class="fa-solid fa-table-cells-large"></i> 歌单分类</h2>
-            <p>选择音乐源，挑选喜欢的分类，进入对应歌单列表。</p>
+            <p>选择音乐源，挑选喜欢的分类，进入对应歌单列表。酷狗内容同步自桌面乐库频道。</p>
         </div>
     </header>
 

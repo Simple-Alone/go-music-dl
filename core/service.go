@@ -321,7 +321,7 @@ func GetPlaylistCategoriesFunc(source string) PlaylistCategoriesFunc {
 	case "qq":
 		return qq.New(c).GetPlaylistCategories
 	case "kugou":
-		return kugou.New(c).GetPlaylistCategories
+		return GetKugouDesktopPlaylistCategories
 	case "kuwo":
 		return kuwo.New(c).GetPlaylistCategories
 	case "migu":
@@ -345,7 +345,7 @@ func GetCategoryPlaylistsFunc(source string) CategoryPlaylistsFunc {
 	case "qq":
 		return qq.New(c).GetCategoryPlaylists
 	case "kugou":
-		return kugou.New(c).GetCategoryPlaylists
+		return GetKugouDesktopCategoryPlaylists
 	case "kuwo":
 		return kuwo.New(c).GetCategoryPlaylists
 	case "migu":

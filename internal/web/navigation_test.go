@@ -19,6 +19,7 @@ func newTestTemplate(t *testing.T) *template.Template {
 		"albumID":            songAlbumID,
 		"playlistDetailURL":  playlistDetailURL,
 		"playlistExtraValue": playlistExtraValue,
+		"formatCompactCount": formatCompactCount,
 		"tojson": func(v interface{}) string {
 			if v == nil {
 				return ""

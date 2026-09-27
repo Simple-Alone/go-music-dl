@@ -86,7 +86,8 @@ func TestAppJSKugouPreferredPlaybackFallback(t *testing.T) {
 		"async function fallbackRestrictedKugouPlayback(reason)",
 		"function isKnownRestrictedKugouCard(card)",
 		"function switchRestrictedCardBeforePlay(card, playButton, allCards)",
-		"playableCards.forEach((card) => {",
+		"function buildPlaybackAudioFromCard(card)",
+		".map((card) => buildPlaybackAudioFromCard(card))",
 		`fallbackRestrictedKugouPlayback("检测到试听片段")`,
 		`fallbackRestrictedKugouPlayback("酷狗播放失败")`,
 	} {

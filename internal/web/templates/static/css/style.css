@@ -384,6 +384,25 @@ body.batch-mode .song-card { padding-left: 10px; }
 .category-current-title { margin-top: 8px; color: var(--text-main); font-size: 18px; font-weight: 800; letter-spacing: -0.2px; }
 .category-current-sep { color: #cbd5e0; margin: 0 8px; font-weight: 600; }
 .category-current-subtitle { margin-top: 4px; color: var(--text-sub); font-size: 12px; }
+.category-sort-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    margin-top: 10px;
+    background: #f1f5f9;
+    border-radius: 8px;
+}
+.category-sort-tab {
+    color: var(--text-sub);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+.category-sort-tab:hover { color: #059669; }
+.category-sort-tab.is-active { background: #fff; color: #059669; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1); }
 
 .category-panel {
     background: rgba(255, 255, 255, 0.95);
@@ -1057,14 +1076,24 @@ body.vg-open .aplayer.aplayer-fixed {
 .playback-history-play:hover { border-color: #34d399; background: #d1fae5; }
 
 .guess-you-like { margin-bottom: 18px; padding: 18px 20px; border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff; }
-.guess-you-like-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.guess-you-like-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.guess-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
 .guess-you-like h2 { margin: 0; color: var(--text-main); font-size: 18px; }
 .guess-you-like h2 i { margin-right: 7px; color: #3b82f6; }
+.guess-source-label { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #64748b; font-size: 11px; font-weight: 700; }
+.guess-source-label.is-native { border-color: #86efac; background: #f0fdf4; color: #047857; }
 .guess-seeds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .guess-seed { max-width: 180px; overflow: hidden; padding: 4px 8px; border-radius: 6px; background: #e8f1ff; color: #2563eb; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .guess-refresh { flex: none; }
 .guess-empty-state { display: flex; align-items: center; gap: 9px; min-height: 64px; margin-top: 14px; padding: 14px; border: 1px dashed #bfdbfe; border-radius: 8px; color: var(--text-sub); font-size: 13px; }
 .guess-empty-state i { color: #3b82f6; font-size: 18px; }
+.guess-empty-state.is-error { border-color: #fecaca; background: #fffafa; }
+.guess-empty-state.is-error > i { color: #dc2626; }
+.guess-empty-copy { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
+.guess-empty-copy > span { overflow-wrap: anywhere; }
+.guess-local-fallback { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 9px; border: 1px solid #bfdbfe; border-radius: 6px; background: #fff; color: #2563eb; font-size: 12px; font-weight: 700; cursor: pointer; }
+.guess-local-fallback:hover { border-color: #60a5fa; background: #eff6ff; }
+.guess-local-fallback i { color: currentColor; font-size: 12px; }
 .utility-empty-state { display: grid; place-items: center; min-height: 170px; padding: 18px; text-align: center; color: var(--text-sub); font-size: 13px; }
 .utility-empty-state i { margin-bottom: 8px; font-size: 22px; color: #94a3b8; }
 .duplicate-modal { max-width: 640px; }
@@ -1680,6 +1709,8 @@ body.karaoke-lyrics-active .aplayer .aplayer-lrc p.aplayer-lrc-current {
     .category-current-bar { margin: 0 12px 14px; padding: 12px 14px; border-radius: 14px; align-items: stretch; }
     .category-current-bar .btn-pill { width: 100%; justify-content: center; box-sizing: border-box; }
     .category-current-title { font-size: 16px; }
+    .category-sort-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; box-sizing: border-box; }
+    .category-sort-tab { padding: 6px 4px; text-align: center; }
     .category-panel { margin: 0 12px 18px; padding: 16px; border-radius: 16px; }
     .category-panel-title h2 { font-size: 1.15rem; }
     .category-panel-title p { font-size: 12px; }

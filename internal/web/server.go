@@ -165,6 +165,17 @@ func playlistExtraValue(playlist model.Playlist, key string) string {
 	return strings.TrimSpace(playlist.Extra[key])
 }
 
+func formatCompactCount(count int) string {
+	switch {
+	case count >= 100000000:
+		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(count)/100000000), ".0") + "亿"
+	case count >= 10000:
+		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(count)/10000), ".0") + "万"
+	default:
+		return strconv.Itoa(count)
+	}
+}
+
 func importCollectionHoverText(contentType string) string {
 	if contentType == collectionContentAlbum {
 		return "导入到本地歌单列表，保存为外部导入专辑；仅保存元数据，不保存具体歌曲明细。"
@@ -216,6 +227,36 @@ func playlistDetailURL(root string, searchType string, playlist model.Playlist) 
 	return fmt.Sprintf("%s/%s?%s", root, route, values.Encode())
 }
 
+type indexPaginationOverride struct {
+	Page       int
+	PageSize   int
+	TotalCount int
+}
+
+func requestIndexPagination(c *gin.Context) (int, int) {
+	settings := core.GetWebSettings()
+	pageSize := settings.WebPageSize
+	if pageSize <= 0 {
+		pageSize = core.DefaultWebPageSize
+	}
+	if raw := strings.TrimSpace(c.Query("page_size")); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+			pageSize = n
+		}
+	}
+	if pageSize > 500 {
+		pageSize = 500
+	}
+
+	page := 1
+	if raw := strings.TrimSpace(c.Query("page")); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+			page = n
+		}
+	}
+	return page, pageSize
+}
+
 func renderIndex(c *gin.Context, songs []model.Song, playlists []model.Playlist, q string, selected []string, errMsg string, searchType string, playlistLink string, colID string, colName string, isLocalColPage bool, collectionKind string, importCollection *importCollectionMeta) {
 	allSrc := core.GetAllSourceNames()
 	desc := make(map[string]string)
@@ -257,33 +298,23 @@ func renderIndex(c *gin.Context, songs []model.Song, playlists []model.Playlist,
 		}
 	}
 
-	settings := core.GetWebSettings()
-	defaultPageSize := settings.WebPageSize
-	if defaultPageSize <= 0 {
-		defaultPageSize = core.DefaultWebPageSize
-	}
-	pageSize := defaultPageSize
-	if raw := strings.TrimSpace(c.Query("page_size")); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
-			pageSize = n
-		}
-	}
-	if pageSize > 500 {
-		pageSize = 500
-	}
-
-	page := 1
-	if raw := strings.TrimSpace(c.Query("page")); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
-			page = n
-		}
-	}
+	page, pageSize := requestIndexPagination(c)
 
 	totalCount := 0
 	if len(songs) > 0 {
 		totalCount = len(songs)
 	} else if len(playlists) > 0 {
 		totalCount = len(playlists)
+	}
+
+	prePaginated := false
+	if value, ok := c.Get("IndexPaginationOverride"); ok {
+		if override, valid := value.(indexPaginationOverride); valid {
+			prePaginated = true
+			page = override.Page
+			pageSize = override.PageSize
+			totalCount = override.TotalCount
+		}
 	}
 
 	totalPages := 1
@@ -298,16 +329,22 @@ func renderIndex(c *gin.Context, songs []model.Song, playlists []model.Playlist,
 		if pageStart < 0 {
 			pageStart = 0
 		}
-		pageEnd = pageStart + pageSize
-		if pageEnd > totalCount {
-			pageEnd = totalCount
-		}
-
-		if len(songs) > 0 {
-			songs = songs[pageStart:pageEnd]
-		}
-		if len(playlists) > 0 {
-			playlists = playlists[pageStart:pageEnd]
+		if prePaginated {
+			pageEnd = pageStart + len(songs) + len(playlists)
+			if pageEnd > totalCount {
+				pageEnd = totalCount
+			}
+		} else {
+			pageEnd = pageStart + pageSize
+			if pageEnd > totalCount {
+				pageEnd = totalCount
+			}
+			if len(songs) > 0 {
+				songs = songs[pageStart:pageEnd]
+			}
+			if len(playlists) > 0 {
+				playlists = playlists[pageStart:pageEnd]
+			}
 		}
 	}
 
@@ -408,6 +445,7 @@ func StartWithOptions(port string, opts StartOptions) {
 		"albumID":            songAlbumID,
 		"playlistDetailURL":  playlistDetailURL,
 		"playlistExtraValue": playlistExtraValue,
+		"formatCompactCount": formatCompactCount,
 		"tojson": func(v interface{}) string {
 			if v == nil {
 				return ""
