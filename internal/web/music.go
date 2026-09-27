@@ -472,7 +472,6 @@ func RegisterMusicRoutes(api, configAPI *gin.RouterGroup) {
 			playlists = result.Playlists
 			err = fetchErr
 			if fetchErr == nil {
-				page = result.Page
 				pageSize = result.PageSize
 				c.Set("IndexPaginationOverride", indexPaginationOverride{
 					Page:       result.Page,

@@ -173,7 +173,7 @@ func fetchKugouDesktopPlaylistDocument(channelID string, page, pageSize, sortID 
 	if err != nil {
 		return nil, nil, fmt.Errorf("请求酷狗桌面频道失败：%w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, nil, fmt.Errorf("酷狗桌面频道返回 HTTP %d", resp.StatusCode)
 	}

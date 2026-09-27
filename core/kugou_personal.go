@@ -242,7 +242,7 @@ func GetKugouPersonalRecommendations(options KugouPersonalRecommendOptions) (Kug
 	if err != nil {
 		return KugouPersonalRecommendResult{}, fmt.Errorf("请求酷狗原生推荐失败：%w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return KugouPersonalRecommendResult{}, fmt.Errorf("酷狗原生推荐返回 HTTP %d", resp.StatusCode)
 	}
