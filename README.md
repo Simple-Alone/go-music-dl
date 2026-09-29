@@ -58,6 +58,22 @@ Web 模式默认不要求登录即可搜索、播放、下载、浏览歌单 / �
 
 桌面端和移动端 App 内嵌 Web 服务使用 `StartDesktop` 启动，仅监听本机 `127.0.0.1`，并默认关闭 Web 管理员登录流程，避免首次启动时因看不到终端初始化令牌而无法进入应用。
 
+### 本机客户端 API
+
+Web 服务提供只读 JSON 接口，供 Dynamic Panel 等本机客户端浏览平台歌单。默认基础地址为 `http://127.0.0.1:8080/music`：
+
+- `GET /api/playlist/sources`：平台及搜索、分类、推荐、个人歌单能力。
+- `GET /api/playlist/categories?source=<平台>`：平台歌单分类。
+- `GET /api/playlist/search?source=<平台>&q=<关键词>`：搜索在线歌单。
+- `GET /api/playlist/category?source=<平台>&category_id=<分类>`：浏览分类歌单。
+- `GET /api/playlist/recommend?source=<平台>`：推荐歌单。
+- `GET /api/playlist/user?source=<平台>`：当前平台账号的个人歌单。
+- `GET /api/playlist/songs?source=<平台>&id=<歌单>`：读取歌单歌曲。
+- `GET /api/recommend/kugou/songs`：读取或续拉酷狗原生「猜你喜欢」歌曲流，需要有效酷狗登录 Cookie。
+- `GET /api/playback/resolve`：验证原音源，并在受限或不可播放时查找其它平台的可播放版本。
+
+客户端通过现有 `GET /download?stream=1` 播放解析后的歌曲，通过 `GET /cover_proxy` 读取远程封面。连续推荐接口接收游标、当前歌曲和播放进度；换源接口按歌名、歌手、时长和实际可播放性选择其它平台版本。接口不会返回平台 Cookie 或管理员凭据；平台不支持、未登录、上游失败和真实空结果使用不同的结构化结果。
+
 ### TUI 模式
 
 ```bash

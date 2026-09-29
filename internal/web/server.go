@@ -523,6 +523,8 @@ func StartWithOptions(port string, opts StartOptions) {
 	})
 
 	RegisterMusicRoutes(api, configAPI)
+	RegisterPlaylistAPIRoutes(api)
+	RegisterClientMusicAPIRoutes(api)
 	RegisterQRLoginRoutes(configAPI)
 	RegisterCollectionRoutes(api)
 	RegisterLocalMusicRoutes(api)
